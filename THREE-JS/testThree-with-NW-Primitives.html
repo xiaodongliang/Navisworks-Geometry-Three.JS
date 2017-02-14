@@ -1,0 +1,244 @@
+﻿<!--Copyright (c) Autodesk, Inc. All rights reserved
+//Autodesk Forge 
+//Written by Xiaodong Liang
+//Permission to use, copy, modify, and distribute this software 
+//in object code form for any purpose and without fee is hereby granted,
+//provided that the above copyright notice appears in all copies and that
+//both that copyright notice and the limited warranty and restricted rights
+//notice below appear in all supporting documentation.
+//AUTODESK PROVIDES THIS PROGRAM "AS IS" AND WITH ALL FAULTS. AUTODESK SPECIFICALLY 
+//DISCLAIMS ANY IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR USE. AUTODESK, INC. 
+//DOES NOT WARRANT THAT THE OPERATION OF THE PROGRAM WILL BE UNINTERRUPTED OR ERROR FREE.
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title></title>         
+        <script src="js/jquery-2.1.2.min.js"></script>
+        <script src="js/three.js"></script>
+		<script src="js/OrbitControls.js"></script>
+	</head>
+
+	<style type="text/css">
+            div#canvas3d{
+                  border: none;
+                  cursor: move;
+                  width: 1200px;
+                  height: 600px;
+                  background-color: #EEEEEE;
+                }
+        </style>
+
+    <body>
+      <input id="myInputTask" type="file" />
+      <div id="canvas3d"></div>
+	 </body>
+
+
+     <script type="text/javascript">
+
+     		// THREE Render
+            var renderer; 
+            // THREE Camera
+            var camera;
+            // THREE Scene
+            var scene;
+            // THREE Light
+            var light;
+            // Navigation control
+            var controls; 
+
+            // vertices 	
+            var verticesArray=[];
+ 
+		     $("#myInputTask").change(function (evt) {
+			        var files = evt.target.files; 
+			        var f = files[0];
+
+			        if (f) {
+			            var r = new FileReader();
+			            r.onload = function (e) {
+			            	var rawVerticesData = e.target.result.split('|');
+			            	 rawVerticesData.pop();
+
+			            	  for(var index = 0; index <rawVerticesData.length;index++)
+			            		{
+			            			var rawEachVer = rawVerticesData[index]; 
+			            			var eachVertexArray=  rawEachVer.split(',');
+			            			verticesArray.push(eachVertexArray); 
+			            		} 
+
+			                threeStart();
+			              
+			            }
+			            r.readAsText(f);
+			        } else {
+			            alert("Failed to load file");
+			        }
+		    });
+
+		      
+			 function threeStart() {
+                initThree();
+				 
+                initScene();
+                initLight();
+                initAxis();
+				 
+				createMesh();
+				iniControls();
+                renderer.clear();
+                renderer.render(scene, camera);
+				timerSt();
+				animate();
+            }
+
+
+
+             
+            function initThree() {
+                width = document.getElementById('canvas3d').clientWidth; 
+                height = document.getElementById('canvas3d').clientHeight; 
+                renderer = new THREE.WebGLRenderer({ antialias: true }); 
+                renderer.setSize(width, height); 
+                document.getElementById('canvas3d').appendChild(renderer.domElement);
+                renderer.setClearColor(0xFFFFFF, 1.0); 
+            }
+           
+            function initCamera(far,pos,look) {
+                camera = new THREE.PerspectiveCamera(75, width / height, 1, far); 
+                camera.position.x = pos.x; 
+                camera.position.y = pos.y; 
+                camera.position.z = pos.z; 
+                camera.up.x = 0; 
+                camera.up.y = 1; 
+                camera.up.z = 0; 
+                camera.lookAt({ x: look.x, y: look.y, z: look.z }); 
+            }
+
+             function updateCamera(geoRadius)
+            {
+            	var vFOV = camera.fov * Math.PI/180;
+
+            }
+  
+            
+            function initScene() {
+                scene = new THREE.Scene();
+            }
+
+            
+            function initLight() {
+                light = new THREE.DirectionalLight(0xff0000, 1.0, 0); 
+                light.position.set(200, 200, 200); 
+                scene.add(light); 
+            }
+          
+             
+			 function initAxis()
+			 {
+				var axes = new THREE.AxisHelper(20);
+			   scene.add(axes);
+
+			 }
+			
+           
+			
+			 
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				render();
+
+			}
+			
+			
+			function render() {  
+				  
+				renderer.render( scene, camera );  
+			}
+			
+			
+			function iniControls()
+			{
+				controls = new THREE.OrbitControls( camera );
+				controls.addEventListener( 'change', render );
+
+			}
+			function animate() {
+
+				requestAnimationFrame(animate);
+				controls.update(); 
+			}
+			
+		 
+			
+			var  timeHandle;
+			function timerSt()
+			{
+				timeHandle =  setInterval(function () { myTimer() }, 50);
+				 
+			}
+			
+			 var tick = 0;
+			 function myTimer() { 
+				tick ++;
+				render();
+			 }
+			
+		 
+
+			function createMesh()
+			{  	 
+				var geometry = new THREE.Geometry();
+ 			  
+  
+			   	for( var i = 0; i < verticesArray.length; i++ ){
+					geometry.vertices.push( 
+						new THREE.Vector3( 
+							 verticesArray[i][0],
+							 verticesArray[i][1],
+							 verticesArray[i][2] ));
+					}
+				 
+				 var index = 0;
+				 for( var i = 0; i < verticesArray.length - 3; i++ ){
+				 	var eachF = new THREE.Face3( index, index+1, index+2 )
+				 	eachF.color.setRGB( Math.random(),Math.random(), Math.random());
+				 	geometry.faces.push( eachF);
+					index = index +1;
+				 } 
+
+				 var verMaterial = new THREE.MeshBasicMaterial({vertexColors: THREE.FaceColors}); 
+
+				 var mesh = new THREE.Mesh( geometry, verMaterial );
+
+			     scene.add(mesh); 
+
+
+			     //get bounding sphere of the model
+			    geometry.computeBoundingSphere();
+			    var rad = geometry.boundingSphere.radius;
+			    var center = geometry.boundingSphere.center;
+
+			    //initialize the camera of Three.JS
+			    var pos = {x:center.x,y:center.y,z:center.z + rad };
+			    var look = {x:center.x,y:center.y,z:center.z }; 
+ 
+ 				//camera farest		
+ 				var possibleFar = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+ 				possibleFar = possibleFar > rad * 2 ? possibleFar : rad * 2; 
+ 				possibleFar *=2;
+			    initCamera(possibleFar,pos,look); 
+		     } 
+
+		
+		</Script>   
+   
+</html>
